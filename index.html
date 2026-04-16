@@ -47,6 +47,10 @@
   .submit-btn{width:100%;margin-top:1.5rem;padding:15px;background:#1565C0;color:#fff;border:none;border-radius:10px;font-size:16px;font-weight:500;cursor:pointer;letter-spacing:0.3px;transition:background 0.15s;-webkit-appearance:none}
   .submit-btn:active{background:#0D47A1;transform:scale(0.99)}
   .submit-btn:disabled{background:#ccc;cursor:not-allowed}
+  .cert-btn{margin-top:8px;padding:10px 14px;background:#1565C0;color:#fff;border:none;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer;-webkit-appearance:none}
+  .cert-btn:active{background:#0D47A1}
+  .cert-btn:disabled{background:#90CAF9;cursor:not-allowed}
+  .cert-btn.done{background:#43A047}
   .success-msg{display:none;background:#E3F2FD;border:0.5px solid #90CAF9;border-radius:10px;padding:20px;text-align:center;margin-top:1.5rem;color:#0C447C;font-size:15px;line-height:1.8}
   .success-msg b{color:#E65100;font-size:14px;display:block;margin-top:8px}
 </style>
@@ -78,6 +82,7 @@
     <div class="field-row">
       <div class="field-label">휴대폰 연락처 <span style="color:#E53935">*</span></div>
       <input type="tel" id="phone" placeholder="010-0000-0000">
+      <button type="button" id="cert-btn" class="cert-btn" onclick="startCert()">본인인증</button>
     </div>
     <div class="field-row">
       <div class="field-label">연령대 <span style="color:#E53935">*</span></div>
@@ -144,6 +149,92 @@ document.querySelectorAll(".course-item").forEach(function(item) {
   });
 });
 
+// GAS Web App URL (본인인증 + 저장 공용 엔드포인트)
+const GAS_URL = "https://script.google.com/macros/s/AKfycbw0AEuQyAPomA7T2A1y_9ft29pbE7ZR87_YpbVGLMhxuWRC9Gam7he3eiq9ABgfNNYEsA/exec";
+
+// KCP 본인확인창 URL (테스트)
+const KCP_CERT_URL = "https://testcert.kcp.co.kr/kcp_cert/cert_view.jsp";
+// 운영: "https://cert.kcp.co.kr/kcp_cert/cert_view.jsp"
+
+// 본인인증 시작
+async function startCert() {
+  const name = document.getElementById("name").value.trim();
+  const phone = document.getElementById("phone").value.trim();
+  if(!name)  { alert("이름을 먼저 입력해주세요."); return; }
+  if(!phone) { alert("휴대폰 연락처를 먼저 입력해주세요."); return; }
+
+  const btn = document.getElementById("cert-btn");
+  btn.disabled = true;
+  btn.textContent = "인증창 여는 중...";
+
+  try {
+    // 1) GAS에 up_hash 생성 요청
+    const res = await fetch(GAS_URL, {
+      method: "POST",
+      headers: { "Content-Type": "text/plain" },
+      body: JSON.stringify({ action: "getUpHash" })
+    });
+    const d = await res.json();
+    if (!d.ok) throw new Error(d.error || "up_hash 생성 실패");
+
+    // 2) 본인확인창 팝업 (hidden form POST)
+    const popup = window.open("", "kcp_cert_popup", "width=420,height=640,scrollbars=yes");
+    const form = document.createElement("form");
+    form.method = "POST";
+    form.action = KCP_CERT_URL;
+    form.target = "kcp_cert_popup";
+    form.acceptCharset = "UTF-8";
+    const fields = {
+      site_cd:            d.site_cd,
+      ordr_idxx:          d.ordr_idxx,
+      req_tx:             "CERT",
+      cert_method:        "01",
+      up_hash:            d.up_hash,
+      cert_otp_use:       "Y",
+      Ret_URL:            GAS_URL,
+      cert_enc_use_ext:   "Y",
+      kcp_merchant_time:  d.kcp_merchant_time,
+      kcp_cert_lib_ver:   d.kcp_cert_lib_ver,
+      web_siteid_hashYN:  d.web_siteid ? "Y" : "",
+      web_siteid:         d.web_siteid || ""
+    };
+    for (const k in fields) {
+      const i = document.createElement("input");
+      i.type = "hidden"; i.name = k; i.value = fields[k];
+      form.appendChild(i);
+    }
+    document.body.appendChild(form);
+    form.submit();
+    document.body.removeChild(form);
+
+    btn.textContent = "인증 진행 중...";
+  } catch(err) {
+    alert("본인인증 요청 실패: " + err.message);
+    btn.disabled = false;
+    btn.textContent = "본인인증";
+  }
+}
+
+// KCP 팝업 → GAS → postMessage 수신
+window.addEventListener("message", function(e) {
+  if (!e.data || e.data.type !== "kcp-cert") return;
+  const btn = document.getElementById("cert-btn");
+  const p = e.data.payload || {};
+  if (p.ok) {
+    window.CERT_TOKEN = p.token;
+    btn.textContent = "인증 완료";
+    btn.classList.add("done");
+    btn.disabled = true;
+    // 인증된 이름/번호로 입력값 동기화 (불일치 방지)
+    if (p.user_name) document.getElementById("name").value = p.user_name;
+    if (p.phone_no)  document.getElementById("phone").value = p.phone_no;
+  } else {
+    alert("본인인증 실패: " + (p.error || "알 수 없는 오류"));
+    btn.disabled = false;
+    btn.textContent = "본인인증";
+  }
+});
+
 function handleSubmit() {
   const name = document.getElementById("name").value.trim();
   const phone = document.getElementById("phone").value.trim();
@@ -154,6 +245,7 @@ function handleSubmit() {
 
   if(!name)       { alert("이름을 입력해주세요."); return; }
   if(!phone)      { alert("휴대폰 연락처를 입력해주세요."); return; }
+  if(!window.CERT_TOKEN) { alert("본인인증을 먼저 완료해 주세요."); return; }
   if(!ages)       { alert("연령대를 선택해주세요."); return; }
   if(!courseName) { alert("신청할 과정을 선택해주세요."); return; }
   if(!privacy)    { alert("개인정보 수집 및 이용에 동의해주세요."); return; }
@@ -162,16 +254,13 @@ function handleSubmit() {
   submitBtn.disabled = true;
   submitBtn.textContent = "처리 중...";
 
-  // test
-  const scriptUrl = "https://script.google.com/macros/s/AKfycbw5aoaaCV16YZz8u95A8S5gbwChSMbazfkI7t59i1TKfvw7LzdA8i8Oe69FvZTRQCU3Gg/exec";
-
   // ① 구글 시트 전송 — 결과와 무관하게 독립 실행
   try {
-    fetch(scriptUrl, {
+    fetch(GAS_URL, {
       method: "POST",
       mode: "no-cors",
       headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify({ name, phone, age: ages, course: courseName, tid: tid, campaignkey: campaignkey })
+      body: JSON.stringify({ action: "saveData", cert_token: window.CERT_TOKEN, name, phone, age: ages, course: courseName, tid: tid, campaignkey: campaignkey })
     });
   } catch(e) {}
 
