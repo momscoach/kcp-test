@@ -31,16 +31,19 @@
   .field-row input.invalid{border-color:#E53935;background:#FFF5F5}
   .field-row input[readonly]{background:#f8f9fa;color:#555;cursor:not-allowed;border-color:#e5e7eb}
   .field-row input[readonly].filled{background:#E8F5E9;color:#1B5E20;border-color:#A5D6A7;font-weight:600}
+  .cert-info{display:flex;align-items:center;gap:10px;padding:13px 14px;background:#FFF8E1;border-bottom:0.5px solid #FFE0B2;color:#5D4037;font-size:13px;line-height:1.55}
+  .cert-info-icon{flex-shrink:0;width:22px;height:22px;background:#FF9800;color:#fff;border-radius:50%;display:inline-flex;align-items:center;justify-content:center;font-size:13px;font-weight:700}
+  .cert-info strong{color:#E65100;font-weight:700}
   .cert-group{display:flex;gap:12px;align-items:stretch;padding:14px;background:#fff;border-bottom:0.5px solid #eee}
   .cert-inputs-col{flex:1;min-width:0;display:flex;flex-direction:column;gap:14px}
   .cert-inputs-col .field-row{margin:0;padding:0;border:none;background:transparent}
-  .cert-group .cert-btn{flex:0 0 96px;margin:0;padding:10px 8px;border-radius:10px;background:linear-gradient(135deg,#1E88E5 0%,#1565C0 100%);color:#fff;font-size:13px;font-weight:600;letter-spacing:0.3px;border:none;cursor:pointer;box-shadow:0 3px 10px rgba(21,101,192,0.28);transition:all 0.2s cubic-bezier(0.4,0,0.2,1);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;line-height:1;-webkit-appearance:none}
-  .cert-group .cert-btn svg{width:26px;height:26px;stroke:currentColor;stroke-width:2;fill:none;opacity:0.95;flex-shrink:0}
-  .cert-group .cert-btn:hover:not(:disabled){box-shadow:0 5px 14px rgba(21,101,192,0.38);transform:translateY(-1px)}
-  .cert-group .cert-btn:active:not(:disabled){transform:translateY(0);box-shadow:0 2px 8px rgba(21,101,192,0.22)}
-  .cert-group .cert-btn:disabled{background:linear-gradient(135deg,#B0BEC5 0%,#90A4AE 100%);box-shadow:none;color:#fff;cursor:not-allowed;opacity:0.85}
-  .cert-group .cert-btn.done{background:linear-gradient(135deg,#66BB6A 0%,#43A047 100%);box-shadow:0 3px 10px rgba(67,160,71,0.32)}
-  .cert-group .cert-btn.done svg{stroke-width:2.5}
+  .cert-group .cert-btn{flex:0 0 110px;margin:0;padding:14px 10px;border-radius:10px;background:linear-gradient(135deg,#1E88E5 0%,#1565C0 100%);color:#fff;font-size:16px;font-weight:700;letter-spacing:0.5px;border:none;cursor:pointer;box-shadow:0 3px 10px rgba(21,101,192,0.3);transition:all 0.2s cubic-bezier(0.4,0,0.2,1);display:flex;align-items:center;justify-content:center;line-height:1.3;text-align:center;-webkit-appearance:none}
+  .cert-group .cert-btn:hover:not(:disabled){box-shadow:0 5px 14px rgba(21,101,192,0.42);transform:translateY(-1px)}
+  .cert-group .cert-btn:active:not(:disabled){transform:translateY(0);box-shadow:0 2px 8px rgba(21,101,192,0.25)}
+  .cert-group .cert-btn:disabled{background:linear-gradient(135deg,#B0BEC5 0%,#90A4AE 100%);box-shadow:none;color:#fff;cursor:not-allowed;opacity:0.9;animation:none}
+  .cert-group .cert-btn.done{background:linear-gradient(135deg,#66BB6A 0%,#43A047 100%);box-shadow:0 3px 10px rgba(67,160,71,0.32);animation:none}
+  .cert-group .cert-btn:not(.done):not(:disabled){animation:certPulse 2.2s ease-in-out infinite}
+  @keyframes certPulse{0%,100%{box-shadow:0 3px 10px rgba(21,101,192,0.3)}50%{box-shadow:0 5px 20px rgba(21,101,192,0.55)}}
   .field-hint{margin-top:6px;font-size:12px;color:#888;line-height:1.5}
   .field-hint.error{color:#E53935}
   .field-row input:focus{border-color:#1565C0;box-shadow:0 0 0 3px rgba(21,101,192,0.1);background:#fff}
@@ -103,6 +106,10 @@
 
   <div class="section-title">기본 정보</div>
   <div class="field-group">
+    <div class="cert-info" id="cert-info">
+      <span class="cert-info-icon">!</span>
+      <span>오른쪽 <strong>[본인인증]</strong> 버튼을 눌러주세요.<br>이름과 휴대폰 번호가 자동으로 입력됩니다.</span>
+    </div>
     <div class="cert-group">
       <div class="cert-inputs-col">
         <div class="field-row">
@@ -115,11 +122,9 @@
         </div>
       </div>
       <button type="button" id="cert-btn" class="cert-btn" onclick="startCert()">
-        <svg viewBox="0 0 24 24" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/></svg>
         <span class="cert-btn-text">본인인증</span>
       </button>
     </div>
-    <div class="field-row"><div class="field-hint" id="phone-hint">[본인인증] 버튼을 눌러 이름과 휴대폰 번호를 본인확인해 주세요</div></div>
     <div class="field-row">
       <div class="field-label">연령대 <span style="color:#E53935">*</span></div>
       <div class="age-grid">
@@ -345,8 +350,14 @@ function handleCertResult(p) {
       formatPhone(phoneEl);
       phoneEl.classList.add("filled");
     }
-    const hint = document.getElementById("phone-hint");
-    if (hint) { hint.textContent = "본인인증이 완료되었습니다"; hint.style.color = "#2E7D32"; }
+    // 안내 배너를 "완료됨" 스타일로 전환
+    const info = document.getElementById("cert-info");
+    if (info) {
+      info.style.background = "#E8F5E9";
+      info.style.borderBottomColor = "#A5D6A7";
+      info.style.color = "#1B5E20";
+      info.innerHTML = '<span class="cert-info-icon" style="background:#43A047">✓</span><span><strong style="color:#1B5E20">본인인증이 완료되었습니다.</strong> 나머지 항목을 입력 후 제출해 주세요.</span>';
+    }
   } else {
     alert("본인인증 실패: " + (p.error || "알 수 없는 오류"));
     btn.disabled = false;
