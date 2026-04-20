@@ -25,7 +25,12 @@
   .field-row{display:flex;flex-direction:column;padding:12px 14px;border-bottom:0.5px solid #eee;background:#fff}
   .field-row:last-child{border-bottom:none}
   .field-label{font-size:12px;color:#666;margin-bottom:6px}
-  .field-row input[type=text],.field-row input[type=tel]{width:100%;border:1px solid #ddd;border-radius:8px;padding:11px 14px;font-size:16px;background:#fafafa;color:#111;outline:none;-webkit-appearance:none}
+  .field-row input[type=text],.field-row input[type=tel]{width:100%;border:1px solid #ddd;border-radius:8px;padding:11px 14px;font-size:16px;background:#fafafa;color:#111;outline:none;-webkit-appearance:none;transition:border-color 0.15s,background 0.15s}
+  .field-row input[type=tel]{letter-spacing:0.5px;font-variant-numeric:tabular-nums}
+  .field-row input:focus{border-color:#1565C0;background:#fff}
+  .field-row input.invalid{border-color:#E53935;background:#FFF5F5}
+  .field-hint{margin-top:6px;font-size:12px;color:#888;line-height:1.5}
+  .field-hint.error{color:#E53935}
   .field-row input:focus{border-color:#1565C0;box-shadow:0 0 0 3px rgba(21,101,192,0.1);background:#fff}
   .age-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:2px}
   .age-item{display:flex;align-items:center;gap:0;cursor:pointer}
@@ -53,6 +58,17 @@
   .cert-btn.done{background:#43A047}
   .success-msg{display:none;background:#E3F2FD;border:0.5px solid #90CAF9;border-radius:10px;padding:20px;text-align:center;margin-top:1.5rem;color:#0C447C;font-size:15px;line-height:1.8}
   .success-msg b{color:#E65100;font-size:14px;display:block;margin-top:8px}
+  .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:9999;align-items:center;justify-content:center;padding:1.5rem;-webkit-tap-highlight-color:transparent}
+  .modal-overlay.show{display:flex;animation:fadeIn 0.2s ease-out}
+  .modal-card{background:#fff;border-radius:14px;padding:28px 24px 20px;max-width:360px;width:100%;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,0.2);animation:popIn 0.25s ease-out}
+  .modal-icon{font-size:48px;line-height:1;margin-bottom:14px}
+  .modal-title{font-size:18px;font-weight:600;color:#0C447C;margin:0 0 10px}
+  .modal-desc{font-size:14px;color:#555;line-height:1.7;margin:0 0 6px}
+  .modal-note{font-size:13px;color:#E65100;line-height:1.6;margin:14px 0 0;padding:10px 12px;background:#FFF3E0;border-radius:8px}
+  .modal-btn{margin-top:20px;width:100%;padding:13px;background:#1565C0;color:#fff;border:none;border-radius:10px;font-size:15px;font-weight:500;cursor:pointer;-webkit-appearance:none}
+  .modal-btn:active{background:#0D47A1}
+  @keyframes fadeIn{from{opacity:0}to{opacity:1}}
+  @keyframes popIn{from{opacity:0;transform:scale(0.92)}to{opacity:1;transform:scale(1)}}
 </style>
 </head>
 <body>
@@ -81,7 +97,8 @@
     </div>
     <div class="field-row">
       <div class="field-label">휴대폰 연락처 <span style="color:#E53935">*</span></div>
-      <input type="tel" id="phone" placeholder="010-0000-0000">
+      <input type="tel" id="phone" placeholder="010-0000-0000" inputmode="numeric" autocomplete="tel" maxlength="13" oninput="formatPhone(this)" onblur="validatePhone(this)">
+      <div class="field-hint" id="phone-hint">본인 명의의 휴대폰 번호를 입력해 주세요</div>
       <button type="button" id="cert-btn" class="cert-btn" onclick="startCert()">본인인증</button>
     </div>
     <div class="field-row">
@@ -136,6 +153,16 @@
   </div>
 </div>
 
+<div class="modal-overlay" id="success-modal" role="dialog" aria-modal="true" aria-labelledby="modal-title">
+  <div class="modal-card">
+    <div class="modal-icon">🎉</div>
+    <h3 class="modal-title" id="modal-title">신청이 완료되었습니다!</h3>
+    <p class="modal-desc">소중한 신청 감사합니다.</p>
+    <p class="modal-note">교육 담당자가 교육 상담 전화를 드립니다.<br>참고하세요.</p>
+    <button class="modal-btn" onclick="closeSuccessModal()">확인</button>
+  </div>
+</div>
+
 <script>
 const urlParams = new URLSearchParams(window.location.search);
 const tid = urlParams.get("tid") || "";
@@ -149,6 +176,44 @@ document.querySelectorAll(".course-item").forEach(function(item) {
   });
 });
 
+// 휴대폰 번호 자동 하이픈 포맷 (010-1234-5678)
+function formatPhone(el) {
+  const digits = el.value.replace(/\D/g, "").slice(0, 11);
+  let out = digits;
+  if (digits.length >= 8) out = digits.slice(0,3) + "-" + digits.slice(3,7) + "-" + digits.slice(7);
+  else if (digits.length >= 4) out = digits.slice(0,3) + "-" + digits.slice(3);
+  el.value = out;
+  const hint = document.getElementById("phone-hint");
+  if (el.classList.contains("invalid") && isValidPhone(el.value)) {
+    el.classList.remove("invalid");
+    hint.classList.remove("error");
+    hint.textContent = "본인 명의의 휴대폰 번호를 입력해 주세요";
+  }
+}
+
+function isValidPhone(v) {
+  return /^01[016789]-\d{3,4}-\d{4}$/.test(v);
+}
+
+function validatePhone(el) {
+  const hint = document.getElementById("phone-hint");
+  if (!el.value) {
+    el.classList.remove("invalid");
+    hint.classList.remove("error");
+    hint.textContent = "본인 명의의 휴대폰 번호를 입력해 주세요";
+    return;
+  }
+  if (!isValidPhone(el.value)) {
+    el.classList.add("invalid");
+    hint.classList.add("error");
+    hint.textContent = "올바른 휴대폰 번호 형식이 아닙니다 (예: 010-1234-5678)";
+  } else {
+    el.classList.remove("invalid");
+    hint.classList.remove("error");
+    hint.textContent = "본인 명의의 휴대폰 번호를 입력해 주세요";
+  }
+}
+
 // GAS Web App URL (본인인증 + 저장 공용 엔드포인트)
 const GAS_URL = "https://script.google.com/macros/s/AKfycbylsIH9dojPjOpuM05VLCnKnIugCtEgAYmsMzkLeFOTp8CSaReYJf8z7WYrY-npALofyA/exec";
 
@@ -161,6 +226,7 @@ async function startCert() {
   const phone = document.getElementById("phone").value.trim();
   if(!name)  { alert("이름을 먼저 입력해주세요."); return; }
   if(!phone) { alert("휴대폰 연락처를 먼저 입력해주세요."); return; }
+  if(!isValidPhone(phone)) { alert("휴대폰 번호를 올바르게 입력해주세요. (예: 010-1234-5678)"); document.getElementById("phone").focus(); return; }
 
   const btn = document.getElementById("cert-btn");
   btn.disabled = true;
@@ -244,6 +310,7 @@ function handleSubmit() {
 
   if(!name)       { alert("이름을 입력해주세요."); return; }
   if(!phone)      { alert("휴대폰 연락처를 입력해주세요."); return; }
+  if(!isValidPhone(phone)) { alert("휴대폰 번호를 올바르게 입력해주세요. (예: 010-1234-5678)"); document.getElementById("phone").focus(); return; }
   if(!window.CERT_TOKEN) { alert("본인인증을 먼저 완료해 주세요."); return; }
   if(!ages)       { alert("연령대를 선택해주세요."); return; }
   if(!courseName) { alert("신청할 과정을 선택해주세요."); return; }
@@ -277,10 +344,20 @@ function showSuccessUI() {
   const submitBtn = document.querySelector(".submit-btn");
   submitBtn.style.background = "#90CAF9";
   submitBtn.textContent = "제출 완료";
-  const msg = document.getElementById("success-msg");
-  msg.style.display = "block";
-  msg.scrollIntoView({ behavior: "smooth", block: "nearest" });
+  const modal = document.getElementById("success-modal");
+  modal.classList.add("show");
+  document.body.style.overflow = "hidden";
 }
+
+function closeSuccessModal() {
+  const modal = document.getElementById("success-modal");
+  modal.classList.remove("show");
+  document.body.style.overflow = "";
+}
+
+document.getElementById("success-modal").addEventListener("click", function(e) {
+  if(e.target === this) closeSuccessModal();
+});
 </script>
 </body>
 </html>
