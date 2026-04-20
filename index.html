@@ -31,6 +31,9 @@
   .field-row input.invalid{border-color:#E53935;background:#FFF5F5}
   .field-row input[readonly]{background:#f0f0f0;color:#666;cursor:not-allowed}
   .field-row input[readonly].filled{background:#E8F5E9;color:#1B5E20;border-color:#A5D6A7;font-weight:500}
+  .input-with-btn{display:flex;gap:8px;align-items:stretch}
+  .input-with-btn input{flex:1;min-width:0}
+  .input-with-btn .cert-btn{flex:0 0 auto;margin-top:0;white-space:nowrap}
   .field-hint{margin-top:6px;font-size:12px;color:#888;line-height:1.5}
   .field-hint.error{color:#E53935}
   .field-row input:focus{border-color:#1565C0;box-shadow:0 0 0 3px rgba(21,101,192,0.1);background:#fff}
@@ -95,13 +98,15 @@
   <div class="field-group">
     <div class="field-row">
       <div class="field-label">이름 <span style="color:#E53935">*</span></div>
-      <input type="text" id="name" placeholder="본인인증 후 자동 입력" readonly>
+      <input type="text" id="name" readonly>
     </div>
     <div class="field-row">
       <div class="field-label">휴대폰 연락처 <span style="color:#E53935">*</span></div>
-      <input type="tel" id="phone" placeholder="본인인증 후 자동 입력" readonly>
-      <div class="field-hint" id="phone-hint">[본인인증] 버튼을 눌러 휴대폰으로 본인확인을 완료해 주세요</div>
-      <button type="button" id="cert-btn" class="cert-btn" onclick="startCert()">본인인증</button>
+      <div class="input-with-btn">
+        <input type="tel" id="phone" readonly>
+        <button type="button" id="cert-btn" class="cert-btn" onclick="startCert()">본인인증</button>
+      </div>
+      <div class="field-hint" id="phone-hint">[본인인증] 버튼을 눌러 본인확인을 완료해 주세요</div>
     </div>
     <div class="field-row">
       <div class="field-label">연령대 <span style="color:#E53935">*</span></div>
