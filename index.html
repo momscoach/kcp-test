@@ -215,7 +215,7 @@ function validatePhone(el) {
 }
 
 // GAS Web App URL (본인인증 + 저장 공용 엔드포인트)
-const GAS_URL = "https://script.google.com/macros/s/AKfycbzlYEtq2JfQHO5p2zht1tgBzauu1ThTPL-qxi2xE9uG89gswZMcP0w6lCfaoo44ibYOrA/exec";
+const API_BASE = "https://kcp-server.vercel.app";
 
 // KCP 본인확인창 URL (운영)
 const KCP_CERT_URL = "https://cert.kcp.co.kr/kcp_cert/cert_view.jsp";
@@ -233,11 +233,11 @@ async function startCert() {
   btn.textContent = "인증창 여는 중...";
 
   try {
-    // 1) GAS에 up_hash 생성 요청
-    const res = await fetch(GAS_URL, {
+    // 1) Vercel에 up_hash 생성 요청
+    const res = await fetch(API_BASE + "/api/up-hash", {
       method: "POST",
-      headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify({ action: "getUpHash" })
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({})
     });
     const d = await res.json();
     if (!d.ok) throw new Error(d.error || "up_hash 생성 실패");
@@ -256,7 +256,7 @@ async function startCert() {
       cert_method:        "01",
       up_hash:            d.up_hash,
       cert_otp_use:       "Y",
-      Ret_URL:            GAS_URL,
+      Ret_URL:            API_BASE + "/api/callback",
       cert_enc_use_ext:   "Y",
       kcp_merchant_time:  d.kcp_merchant_time,
       kcp_cert_lib_ver:   d.kcp_cert_lib_ver,
@@ -320,13 +320,12 @@ function handleSubmit() {
   submitBtn.disabled = true;
   submitBtn.textContent = "처리 중...";
 
-  // ① 구글 시트 전송 — 결과와 무관하게 독립 실행
+  // ① Vercel로 저장 요청 (내부적으로 JWT 검증 → GAS → 시트)
   try {
-    fetch(GAS_URL, {
+    fetch(API_BASE + "/api/save", {
       method: "POST",
-      mode: "no-cors",
-      headers: { "Content-Type": "text/plain" },
-      body: JSON.stringify({ action: "saveData", cert_token: window.CERT_TOKEN, name, phone, age: ages, course: courseName, tid: tid, campaignkey: campaignkey })
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ cert_token: window.CERT_TOKEN, name, phone, age: ages, course: courseName, tid: tid, campaignkey: campaignkey })
     });
   } catch(e) {}
 
